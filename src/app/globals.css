@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Design tokens — Wanderlust Labs
+   Valores tomados de CONTEXT.md §3. La paleta es deliberadamente clara y fija:
+   el peso visual lo llevan las fotografías, no la interfaz.
+   Acento único (coral) reservado para CTA y estado "guardado".
+--------------------------------------------------------------------------- */
+
 :root {
+  /* Superficies */
   --background: #ffffff;
-  --foreground: #171717;
+  --surface: #f7f7f7;
+  --border: #e6e6e6;
+
+  /* Texto */
+  --foreground: #222222;
+  --muted: #767676;
+
+  /* Acento */
+  --accent: #ff5a5f;
+  --accent-strong: #e0484d;
+  --accent-soft: #fff1f1;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-surface: var(--surface);
+  --color-border: var(--border);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+
+  --font-sans: var(--font-inter);
+
+  /* Radios: 12–20 px en tarjetas e inputs */
+  --radius-input: 12px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
