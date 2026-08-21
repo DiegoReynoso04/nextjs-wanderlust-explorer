@@ -36,7 +36,7 @@ export default function SearchBar({ value, onChange, onClear }: SearchBarProps) 
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Busca por título o destino: sailing, Kyoto, Croatia…"
+        placeholder="Busca por título o destino: velero, Kioto, Croacia…"
         autoComplete="off"
         className="h-13 w-full rounded-input border border-border bg-background pr-12 pl-12 text-base placeholder:text-muted focus:border-foreground focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       />

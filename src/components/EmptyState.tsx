@@ -1,9 +1,12 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface EmptyStateProps {
   title: string;
   description: string;
   actionLabel: string;
+  /** Icono decorativo. Por defecto una lupa, que encaja con "sin resultados". */
+  icon?: ReactNode;
   /** Un estado vacío ofrece o bien limpiar filtros (onAction) o bien navegar (href). */
   onAction?: () => void;
   href?: string;
@@ -13,6 +16,7 @@ export default function EmptyState({
   title,
   description,
   actionLabel,
+  icon,
   onAction,
   href,
 }: EmptyStateProps) {
@@ -25,17 +29,19 @@ export default function EmptyState({
         aria-hidden="true"
         className="flex h-14 w-14 items-center justify-center rounded-full bg-background"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.75}
-          strokeLinecap="round"
-          className="h-6 w-6 text-muted"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+        {icon ?? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            className="h-6 w-6 text-muted"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+        )}
       </span>
 
       <h2 className="mt-5 text-xl font-semibold tracking-tight">{title}</h2>

@@ -156,11 +156,11 @@ export const CATEGORIES = [
 export type Category = (typeof CATEGORIES)[number];
 
 export interface Experience {
-  id: string;            // slug estable y único, p. ej. "adriatic-sailing-route-042"
+  id: string;            // slug ASCII sin tildes, p. ej. "ruta-en-velero-adriatico-042"
   title: string;         // junto con destination, campo sobre el que se aplica la búsqueda (§6)
   description: string;   // 1–3 frases, se muestra completa en el detalle
   category: Category;
-  destination: string;   // "Ciudad, País" — p. ej. "Split, Croatia". Buscable y filtrable
+  destination: string;   // "Ciudad, País" — p. ej. "Split, Croacia". Buscable y filtrable
   price: number;         // en EUR, entero
   rating: number;        // 1.0–5.0, un decimal
   imageUrl: string;      // placeholder, p. ej. https://picsum.photos/seed/<id>/800/600
@@ -177,12 +177,14 @@ Campos opcionales bienvenidos si el generador los produce (`duration`, `groupSiz
   - `id` único en todo el array; usar slug derivado del título + índice.
   - Distribución razonable entre las **5 categorías** (~20 cada una).
   - Al menos **15–25 destinos distintos**, con varias experiencias por destino para que el filtro tenga sentido.
-  - Incluir explícitamente casos del brief: algo de **vela / sailing** en **Croatia** y algún **food tour** en **Bangkok, Thailand**, para poder validar la URL de ejemplo. Si no existen en los datos, el enlace de demostración devuelve una lista vacía delante del cliente.
-  - Títulos variados en inglés, con palabras repetidas entre ellos (p. ej. "sailing", "tour", "market") para que la búsqueda parcial devuelva varios resultados.
+  - Incluir explícitamente casos del brief: algo de **vela / velero** en **Croacia** y algún **tour gastronómico** en **Bangkok, Tailandia**, para poder validar la URL de ejemplo. Si no existen en los datos, el enlace de demostración devuelve una lista vacía delante del cliente.
+  - Títulos y descripciones **en castellano**, igual que el resto de la interfaz, con palabras repetidas entre ellos (p. ej. "ruta", "taller", "tour", "paseo", "mercado") para que la búsqueda parcial devuelva varios resultados.
+  - Los destinos también van en castellano, con el exónimo cuando existe: "Nápoles, Italia", "Kioto, Japón", "Estambul, Turquía".
+  - El `id` se deriva del título pero **plegando tildes y eñes a ASCII**, para que las URLs de detalle no lleven caracteres escapados.
   - `price` entre 15 y 600; `rating` entre 3.5 y 5.0.
   - `imageUrl` con seed determinista por `id`, para que la imagen no cambie entre renders.
 
-> **Prompt sugerido para el asistente de IA:** «Genera un array TypeScript de exactamente 100 objetos `Experience` con la interfaz de arriba. Experiencias de viaje reales y variadas (gastronomía, aventura, cultura, bienestar, naturaleza) en ciudades de todo el mundo. IDs en slug-case y únicos, títulos en inglés de 3–7 palabras, descripciones de 1–2 frases, precios enteros en EUR, ratings con un decimal. Sin comentarios, solo el array exportado.»
+> **Prompt sugerido para el asistente de IA:** «Genera un array TypeScript de exactamente 100 objetos `Experience` con la interfaz de arriba. Experiencias de viaje reales y variadas (gastronomía, aventura, cultura, bienestar, naturaleza) en ciudades de todo el mundo. IDs en slug-case ASCII sin tildes y únicos, títulos en castellano de 4–9 palabras, descripciones de 1–2 frases en castellano, precios enteros en EUR, ratings con un decimal. Sin comentarios, solo el array exportado.»
 
 ---
 
@@ -193,7 +195,7 @@ Campos opcionales bienvenidos si el generador los produce (`duration`, `groupSiz
 La búsqueda y los filtros activos viven en la URL como query parameters. El enlace de referencia es:
 
 ```
-/experiences?search=sailing&category=adventure&destination=Croatia
+/experiences?search=velero&category=adventure&destination=Croacia
 ```
 
 La relación es bidireccional. Al cargar o refrescar la página, los valores presentes en la URL prerrellenan los inputs de búsqueda y selección, y la cuadrícula se renderiza ya filtrada. Al revés, cualquier cambio en un input reescribe la URL al instante, sin recarga y sin que la página salte al principio del scroll.
@@ -201,27 +203,30 @@ La relación es bidireccional. Al cargar o refrescar la página, los valores pre
 Tres reglas de higiene:
 
 1. Los parámetros vacíos o en "todos" se eliminan de la URL; nunca deben quedar restos del tipo `?search=&category=`.
-2. Los valores llegan tal y como los escriba quien comparta el enlace, así que las comparaciones son insensibles a mayúsculas: `category=adventure` debe seleccionar la categoría *Adventure*. Con el destino conviene además aceptar coincidencias parciales, para que `destination=Croatia` encuentre las experiencias de "Split, Croatia".
+2. Los valores llegan tal y como los escriba quien comparta el enlace, así que las comparaciones son insensibles a mayúsculas **y a tildes**: `category=adventure` selecciona la categoría *Adventure*, y `destination=japon` selecciona *Japón*. Con el destino conviene además aceptar coincidencias parciales, para que `destination=Croacia` encuentre las experiencias de "Split, Croacia".
 3. Un valor que no exista —una categoría inventada, por ejemplo— se ignora y se trata como "todos", en lugar de dejar la página en blanco o lanzar un error.
 
 La URL es la fuente de verdad de los filtros. El único estado local admisible es el texto "en vuelo" del buscador mientras se teclea.
 
 ### Lógica de filtrado
 
-**Búsqueda por texto.** Compara el término contra el **título y el destino** de cada experiencia mediante una expresión regular *case-insensitive*, del estilo `/term/i`, con coincidencia parcial: buscar "sail" debe encontrar "Sunset Sailing Route", y buscar "japan" debe encontrar las experiencias de "Kyoto, Japan". Como el destino se guarda en formato "Ciudad, País", una sola expresión cubre ciudad y país sin necesidad de partir la cadena. Basta con que uno de los dos campos case:
+**Búsqueda por texto.** Compara el término contra el **título y el destino** de cada experiencia mediante una expresión regular *case-insensitive*, del estilo `/term/i`, con coincidencia parcial: buscar "velero" encuentra "Ruta en velero al atardecer por el Adriático", y buscar "japon" encuentra las experiencias de "Kioto, Japón". Como el destino se guarda en formato "Ciudad, País", una sola expresión cubre ciudad y país sin necesidad de partir la cadena.
+
+Con el catálogo en castellano, la comparación además **pliega las tildes en los dos lados** antes de evaluarse: nadie debería tener que escribir "Japón" con acento para encontrarlo. Basta con que uno de los dos campos case:
 
 ```ts
-const pattern = new RegExp(escapeRegExp(term), 'i');
-pattern.test(experience.title) || pattern.test(experience.destination);
+// fold() descompone en NFD y descarta las marcas diacríticas: "Japón" → "Japon"
+const pattern = new RegExp(escapeRegExp(fold(term)), 'i');
+pattern.test(fold(experience.title)) || pattern.test(fold(experience.destination));
 ```
 
 Dos precauciones prácticas: escapar los caracteres especiales que escriba el usuario antes de construir la expresión —un paréntesis suelto provocaría un error de sintaxis y tumbaría la página— y esperar unos 250–300 milisegundos entre pulsación y actualización de la URL, para no reescribirla en cada tecla.
 
-> **Nota de revisión.** La primera versión de este documento limitaba la búsqueda al título. Se amplió al destino tras comprobar sobre el dataset real que **33 de los nombres de ciudad y país no aparecen en ningún título**: teclear "Indonesia", "Croatia", "Japan" o "Barcelona" devolvía cero resultados, que es justo lo que un usuario espera encontrar en un buscador de viajes. Es además el comportamiento de GetYourGuide y Klook, las referencias de §3. El filtro de destino no desaparece: sigue siendo un control independiente, y ahora hay dos caminos para la misma consulta.
+> **Nota de revisión.** La primera versión de este documento limitaba la búsqueda al título. Se amplió al destino tras comprobar sobre el dataset real que **33 de los nombres de ciudad y país no aparecen en ningún título**: teclear "Indonesia", "Croacia", "Japón" o "Barcelona" devolvía cero resultados, que es justo lo que un usuario espera encontrar en un buscador de viajes. Es además el comportamiento de GetYourGuide y Klook, las referencias de §3. El filtro de destino no desaparece: sigue siendo un control independiente, y ahora hay dos caminos para la misma consulta.
 
 **Filtros por categoría y destino.** Funcionan de forma independiente entre sí y se combinan con la búsqueda de texto con lógica AND: una experiencia se muestra solo si supera los tres criterios activos. Las opciones de ambos controles se derivan del propio dataset, sin listas escritas a mano, de modo que añadir un destino nuevo a los datos lo hace aparecer automáticamente en el filtro.
 
-El control de destino agrupa sus opciones en **países** y **ciudades**, y ambos valen como valor del filtro. Esto es posible porque el cotejo del destino también es por coincidencia parcial: elegir "Croatia" recoge "Split, Croatia" y "Dubrovnik, Croatia" a la vez, mientras que elegir "Split, Croatia" acota a esa ciudad.
+El control de destino agrupa sus opciones en **países** y **ciudades**, y ambos valen como valor del filtro. Esto es posible porque el cotejo del destino también es por coincidencia parcial: elegir "Croacia" recoge "Split, Croacia" y "Dubrovnik, Croacia" a la vez, mientras que elegir "Split, Croacia" acota a esa ciudad.
 
 Todo el filtrado ocurre en el cliente y en memoria, sin peticiones de red y sin recargas.
 
@@ -288,9 +293,10 @@ nextjs-wanderlust-explorer/
 - [ ] El botón del hero navega a `/experiences` **sin recarga completa** (`next/link`).
 - [ ] Escribir en el buscador actualiza la cuadrícula y la URL (`?search=...`) sin recargar.
 - [ ] Los filtros de categoría y destino funcionan **por separado** y **combinados** con la búsqueda.
-- [ ] Abrir `/experiences?search=sailing&category=adventure&destination=Croatia` en una pestaña nueva muestra la vista ya filtrada **y** los tres controles prerrellenados.
+- [ ] Abrir `/experiences?search=velero&category=adventure&destination=Croacia` en una pestaña nueva muestra la vista ya filtrada **y** los tres controles prerrellenados.
 - [ ] Limpiar un filtro elimina su parámetro de la URL (no quedan `key=` vacíos).
 - [ ] La búsqueda es **case-insensitive** vía regex y no rompe con caracteres especiales (`(`, `*`, `[`).
+- [ ] La búsqueda ignora las tildes: `?search=japon` y `?search=japón` devuelven lo mismo.
 - [ ] Cada tarjeta enlaza a su detalle y el detalle resuelve la experiencia por `id` desde el dataset local.
 - [ ] Un `id` inexistente muestra un 404 controlado, no un crash.
 - [ ] El corazón alterna el favorito y el cambio se refleja al instante en la tarjeta, en el contador del navbar, en `/favorites` y en `/profile`.

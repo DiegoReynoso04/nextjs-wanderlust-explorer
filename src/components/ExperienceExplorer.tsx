@@ -15,6 +15,7 @@ import {
   filterExperiences,
   getDestinationOptions,
   normalizeCategory,
+  sameText,
 } from "@/lib/filters";
 import type { Category } from "@/types/experience";
 
@@ -95,10 +96,9 @@ export default function ExperienceExplorer() {
   // exacta del dataset, lo inyectamos para que el control quede prerrellenado
   // en lugar de mostrar "todos" mientras la cuadrícula sí está filtrada.
   // ---------------------------------------------------------------------
+  // `sameText` ignora tildes, así que ?destination=japon prerrellena "Japón".
   const knownDestination = destination
-    ? (KNOWN_DESTINATIONS.find(
-        (option) => option.toLowerCase() === destination.toLowerCase(),
-      ) ?? null)
+    ? (KNOWN_DESTINATIONS.find((option) => sameText(option, destination)) ?? null)
     : null;
 
   const extraDestination = destination && !knownDestination ? destination : null;
