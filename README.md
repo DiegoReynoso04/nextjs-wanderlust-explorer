@@ -1,163 +1,165 @@
+English | [Español](README.es.md)
+
 # Wanderlust Explorer
 
-MVP del explorador de experiencias de **Wanderlust Labs**: un catálogo de 100 experiencias de viaje que se explora, busca y filtra sin recargar la página, con el estado de los filtros guardado en la URL para que cualquier vista sea compartible.
+MVP of the experience explorer for **Wanderlust Labs**: a catalog of 100 travel experiences you can browse, search and filter without reloading the page, with the filter state stored in the URL so any view can be shared.
 
-Construido con Next.js (App Router), TypeScript y Tailwind CSS. Sin backend, sin base de datos y **sin ninguna librería externa de gestión de estado**.
+Built with Next.js (App Router), TypeScript and Tailwind CSS. No backend, no database and **no external state-management library**.
 
 ---
 
-## Rutas
+## Routes
 
-| Ruta | Descripción |
+| Route | Description |
 |---|---|
-| `/` | Home con hero a pantalla completa y CTA al explorador |
-| `/experiences` | Explorador: buscador, filtros de categoría y destino, cuadrícula de 100 tarjetas |
-| `/experiences/[id]` | Detalle con hero a sangre, descripción y resumen lateral de reserva |
-| `/favorites` | Las experiencias guardadas durante la sesión |
-| `/profile` | Perfil simulado con el contador de favoritos en vivo |
+| `/` | Home with a full-screen hero and a CTA to the explorer |
+| `/experiences` | Explorer: search bar, category and destination filters, grid of 100 cards |
+| `/experiences/[id]` | Detail page with a full-bleed hero, description and booking summary sidebar |
+| `/favorites` | Experiences saved during the session |
+| `/profile` | Mock profile with a live favorites counter |
 
 ---
 
-## Cómo ejecutarlo
+## Run it
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre **http://localhost:3000**.
+Open **http://localhost:3000**.
 
-> **Ojo con la IP de red.** En desarrollo, Next 16 bloquea las peticiones cross-origin a sus recursos internos. Si abres la aplicación desde la IP de tu red local (`http://192.168.x.x:3000`) en lugar de `localhost`, el HTML llega bien renderizado pero **el cliente nunca hidrata**: la página se ve perfecta y no responde a ningún clic. El WebSocket de HMR devuelve un 403 y no hay forma de arreglarlo desde `allowedDevOrigins`.
+> **Watch out for the network IP.** In development, Next 16 blocks cross-origin requests to its internal resources. If you open the app from your local network IP (`http://192.168.x.x:3000`) instead of `localhost`, the HTML renders fine but **the client never hydrates**: the page looks perfect and ignores every click. The HMR WebSocket returns a 403 and `allowedDevOrigins` doesn't fix it.
 >
-> Para probar desde el móvil u otro equipo de la red, usa una build de producción, que no tiene HMR y funciona por IP sin problemas:
+> To test from a phone or another device on the network, use a production build, which has no HMR and works over the IP:
 >
 > ```bash
 > npm run build
 > npm start
 > ```
 
-Otros comandos:
+Other commands:
 
 ```bash
-npm run build   # build de producción
-npm start       # sirve la build
+npm run build   # production build
+npm start       # serve the build
 npm run lint    # ESLint
 ```
 
 ---
 
-## Qué hace
+## What it does
 
-**Búsqueda por texto.** Compara el término contra el título y el destino mediante una expresión regular, ignorando mayúsculas y tildes: `japon` encuentra las experiencias de "Kioto, Japón". Los caracteres especiales se escapan antes de construir la expresión, así que teclear `(` no rompe la página. La URL se reescribe con 280 ms de *debounce* para no hacerlo en cada pulsación.
+**Text search.** Matches the term against the title and the destination with a regular expression, ignoring case and accents: `japon` finds the experiences in "Kioto, Japón". Special characters are escaped before building the expression, so typing `(` doesn't break the page. The URL is rewritten with a 280 ms debounce instead of on every keystroke.
 
-**Filtros combinables.** Categoría (tira horizontal con subrayado en escritorio, desplegable en móvil) y destino (agrupado en países y ciudades). Se combinan entre sí y con la búsqueda mediante lógica AND. Las opciones salen del propio dataset, no de listas escritas a mano.
+**Combinable filters.** Category (a horizontal strip with an underline on desktop, a dropdown on mobile) and destination (grouped by country and city). They combine with each other and with the search using AND logic. The options come from the dataset itself, not from hand-written lists.
 
-**La URL es la fuente de verdad.** Los filtros viven en los query params y la relación es bidireccional: al cargar `/experiences?search=velero&category=adventure&destination=Croacia` los tres controles aparecen prerrellenados y la cuadrícula ya filtrada; al tocar un control, la URL se reescribe sin recarga y sin saltar el scroll. Los parámetros vacíos se eliminan y un valor inexistente se ignora en lugar de romper.
+**The URL is the source of truth.** Filters live in the query params and the sync works both ways: loading `/experiences?search=velero&category=adventure&destination=Croacia` pre-fills the three controls and shows the filtered grid; changing a control rewrites the URL without reloading or jumping the scroll. Empty params are removed and unknown values are ignored instead of breaking the page.
 
-**Favoritos en memoria.** Un `useState<string[]>` en un componente de cliente montado una sola vez en el layout raíz. Desde el contenedor de cada página hacia abajo, el estado y la función de alternado viajan como props explícitas hasta el botón del corazón. El contador del menú, la página de favoritos y el perfil reflejan el cambio al instante. No hay persistencia: al refrescar, la lista se vacía.
+**In-memory favorites.** A `useState<string[]>` in a client component mounted once in the root layout. From each page's container down, the state and the toggle function travel as explicit props to the heart button. The menu counter, the favorites page and the profile update instantly. No persistence: refreshing empties the list.
 
-**Estados vacíos** definidos tanto para "ningún resultado" como para "ningún favorito", con acción para salir del callejón.
-
----
-
-## Decisiones técnicas
-
-**Sin librerías de estado.** Todo se construye con primitivas de React. El `Context` aparece únicamente como canal de transporte para cruzar la frontera del layout de servidor, que no puede pasar funciones como props a `children`.
-
-**Server Components por defecto.** Solo se marcan como cliente las piezas que lo necesitan: el explorador, la tarjeta, el menú, el botón de favoritos y el contador del perfil. La home, el detalle y el perfil se renderizan en el servidor.
-
-**Todo el detalle es estático.** `generateStaticParams` prerenderiza las 100 rutas de `/experiences/[id]` en tiempo de build.
-
-**Dataset generado y validado por script.** Las 100 experiencias cumplen reglas comprobadas automáticamente: ids únicos en slug ASCII sin tildes, 20 experiencias por categoría, 22 destinos de 19 países, precios entre 15 y 600 EUR y valoraciones de un decimal.
+**Empty states** for both "no results" and "no favorites", with an action to get out of the dead end.
 
 ---
 
-## Design References
+## Technical decisions
 
-Antes de escribir un solo componente se analizaron tres interfaces reales de descubrimiento con tarjetas, búsqueda y filtros. De cada una se extrajeron decisiones concretas aplicadas al MVP.
+**No state libraries.** Everything is built with React primitives. `Context` is used only as a transport channel to cross the server layout boundary, which can't pass functions as props to `children`.
+
+**Server Components by default.** Only the pieces that need it are client components: the explorer, the card, the menu, the favorite button and the profile counter. Home, detail and profile render on the server.
+
+**Fully static detail pages.** `generateStaticParams` prerenders all 100 `/experiences/[id]` routes at build time.
+
+**Script-generated and validated dataset.** The 100 experiences follow automatically checked rules: unique ASCII slug ids without accents, 20 experiences per category, 22 destinations in 19 countries, prices between 15 and 600 EUR and ratings with one decimal.
+
+---
+
+## Design references
+
+Before writing a single component, three real discovery interfaces with cards, search and filters were analyzed. Concrete decisions from each one were applied to the MVP.
 
 ### 1. Airbnb — Experiences (`airbnb.com/experiences`)
 
-El referente principal de la estética "clean discovery UI".
+The main reference for the "clean discovery UI" look.
 
-- Cuadrícula de tarjetas con fotos redondeadas, corazón de guardado, precio y valoración, sin borde ni sombra: la profundidad la aporta la fotografía, no la elevación. Es exactamente el modelo de nuestra `ExperienceCard`.
-- La barra de filtros es discreta y escaneable, y nunca compite con las fotos que quedan debajo → nuestro `FilterPanel` va en una franja sticky, ligera, con controles neutros.
-- La tira horizontal de categorías marca la pestaña activa con un subrayado fino y un cambio de peso tipográfico, no con color de relleno → patrón adoptado para el filtro de categoría en viewport ancho.
-- Un único color de acento reservado para la acción primaria y el estado "guardado"; el resto de la interfaz en grises y blanco con mucho aire.
+- Card grid with rounded photos, save heart, price and rating, with no border or shadow: depth comes from the photography, not from elevation. That is exactly the model for our `ExperienceCard`.
+- The filter bar is discreet and scannable and never competes with the photos below → our `FilterPanel` sits in a light sticky strip with neutral controls.
+- The horizontal category strip marks the active tab with a thin underline and a font-weight change, not a fill color → pattern adopted for the category filter on wide viewports.
+- A single accent color reserved for the primary action and the "saved" state; the rest of the interface in grays and white with plenty of space.
 
-### 2. GetYourGuide — Página de resultados (`getyourguide.com`)
+### 2. GetYourGuide — Results page (`getyourguide.com`)
 
-Referencia funcional del sistema de búsqueda y filtros de un marketplace de actividades.
+Functional reference for the search and filter system of an activities marketplace.
 
-- Búsqueda persistente en la cabecera que se mantiene visible en la página de resultados, con el término siempre a la vista.
-- Recuento de resultados sobre la cuadrícula → nuestro `ResultsCount`.
-- Chips de filtros activos con descarte individual y un "limpiar todo" global → nuestro `ActiveFilters`.
-- Filtros reflejados en la URL, lo que hace que cualquier vista filtrada sea compartible.
+- Persistent search in the header, still visible on the results page, with the term always in view.
+- Result count above the grid → our `ResultsCount`.
+- Active filter chips with individual dismiss and a global "clear all" → our `ActiveFilters`.
+- Filters reflected in the URL, which makes any filtered view shareable.
 
-### 3. Klook — Explorar por destino (`klook.com`)
+### 3. Klook — Explore by destination (`klook.com`)
 
-Referencia de densidad y jerarquía cuando hay muchos resultados por destino.
+Reference for density and hierarchy when there are many results per destination.
 
-- Tarjetas compactas con insignia de categoría sobre la imagen y bloque inferior de precio y valoración alineados, que soporta bien 100 items sin cansar la vista.
-- Filtros por destino y por tipo de actividad combinables, con estado vacío explícito.
-- Página de detalle con hero a sangre, resumen lateral y descripción larga debajo → estructura de nuestro `/experiences/[id]`.
+- Compact cards with a category badge over the image and an aligned price and rating block at the bottom, which handles 100 items without tiring the eye.
+- Combinable filters by destination and activity type, with an explicit empty state.
+- Detail page with a full-bleed hero, side summary and long description below → the structure of our `/experiences/[id]`.
 
 ### Design tokens
 
-Definidos como variables CSS en `src/app/globals.css` y expuestos a Tailwind con `@theme inline`.
+Defined as CSS variables in `src/app/globals.css` and exposed to Tailwind with `@theme inline`.
 
-| Token | Valor |
+| Token | Value |
 |---|---|
-| Acento primario | `#FF5A5F` coral, **solo** para CTA y estado favorito |
-| Texto | `#222222` principal, `#767676` secundario |
-| Fondo | `#FFFFFF` lienzo, `#F7F7F7` superficies suaves |
-| Borde | `#E6E6E6` |
-| Radios | 12 px inputs, 16 px tarjetas, 20 px paneles |
-| Tipografía | Inter vía `next/font` |
-| Rejilla | Grid de 1 / 2 / 3 / 4 columnas según breakpoint |
+| Primary accent | `#FF5A5F` coral, **only** for CTAs and the favorite state |
+| Text | `#222222` primary, `#767676` secondary |
+| Background | `#FFFFFF` canvas, `#F7F7F7` soft surfaces |
+| Border | `#E6E6E6` |
+| Radii | 12 px inputs, 16 px cards, 20 px panels |
+| Typography | Inter via `next/font` |
+| Grid | 1 / 2 / 3 / 4 columns depending on the breakpoint |
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
 ```
 nextjs-wanderlust-explorer/
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx                  # Layout raíz: fuente, Navbar y provider de favoritos
+│   │   ├── layout.tsx                  # Root layout: font, Navbar and favorites provider
 │   │   ├── page.tsx                    # Home (/)
 │   │   ├── globals.css                 # Tailwind + design tokens
 │   │   ├── experiences/
-│   │   │   ├── page.tsx                # Explorador — Suspense sobre el componente de cliente
+│   │   │   ├── page.tsx                # Explorer — Suspense around the client component
 │   │   │   └── [id]/
-│   │   │       ├── page.tsx            # Detalle, prerenderizado con generateStaticParams
-│   │   │       └── not-found.tsx       # 404 controlado para un id inexistente
+│   │   │       ├── page.tsx            # Detail, prerendered with generateStaticParams
+│   │   │       └── not-found.tsx       # Handled 404 for an unknown id
 │   │   ├── favorites/
-│   │   │   ├── page.tsx                # Favoritos (componente de cliente)
-│   │   │   └── layout.tsx              # Solo metadata: un cliente no puede exportarla
+│   │   │   ├── page.tsx                # Favorites (client component)
+│   │   │   └── layout.tsx              # Metadata only: a client component can't export it
 │   │   └── profile/
-│   │       └── page.tsx                # Perfil simulado
+│   │       └── page.tsx                # Mock profile
 │   ├── components/
-│   │   ├── Navbar.tsx                  # Navegación con contador de favoritos
-│   │   ├── ExperienceExplorer.tsx      # Orquesta búsqueda, filtros y sincronización con la URL
-│   │   ├── SearchBar.tsx               # Input controlado del buscador
-│   │   ├── FilterPanel.tsx             # Categoría (tira + select) y destino (países y ciudades)
-│   │   ├── ActiveFilters.tsx           # Chips de filtros activos
-│   │   ├── ResultsCount.tsx            # "Mostrando X de 100 experiencias"
-│   │   ├── ExperienceGrid.tsx          # Cuadrícula responsive
-│   │   ├── ExperienceCard.tsx          # Tarjeta con corazón de favoritos
-│   │   ├── FavoriteButton.tsx          # Botón de guardado del detalle
-│   │   ├── FavoritesSummary.tsx        # Contador reactivo del perfil
-│   │   └── EmptyState.tsx              # Sin resultados / sin favoritos
+│   │   ├── Navbar.tsx                  # Navigation with favorites counter
+│   │   ├── ExperienceExplorer.tsx      # Orchestrates search, filters and URL sync
+│   │   ├── SearchBar.tsx               # Controlled search input
+│   │   ├── FilterPanel.tsx             # Category (strip + select) and destination (countries and cities)
+│   │   ├── ActiveFilters.tsx           # Active filter chips
+│   │   ├── ResultsCount.tsx            # "Showing X of 100 experiences"
+│   │   ├── ExperienceGrid.tsx          # Responsive grid
+│   │   ├── ExperienceCard.tsx          # Card with favorite heart
+│   │   ├── FavoriteButton.tsx          # Save button on the detail page
+│   │   ├── FavoritesSummary.tsx        # Reactive profile counter
+│   │   └── EmptyState.tsx              # No results / no favorites
 │   ├── hooks/
-│   │   └── useFavorites.tsx            # Provider y hook, solo con primitivas de React
+│   │   └── useFavorites.tsx            # Provider and hook, React primitives only
 │   ├── data/
-│   │   └── experiences.ts              # Las 100 experiencias
+│   │   └── experiences.ts              # The 100 experiences
 │   ├── lib/
-│   │   └── filters.ts                  # Filtrado, escapado de regex y plegado de tildes
+│   │   └── filters.ts                  # Filtering, regex escaping and accent folding
 │   └── types/
-│       └── experience.ts               # Experience, Category y etiquetas
-├── CONTEXT.md                          # Especificación y fuente de verdad del MVP
+│       └── experience.ts               # Experience, Category and labels
+├── CONTEXT.md                          # MVP specification and source of truth
 ├── README.md
 ├── next.config.ts
 ├── tsconfig.json
@@ -166,6 +168,10 @@ nextjs-wanderlust-explorer/
 
 ---
 
-## Fuera de alcance
+## Out of scope
 
-Backend, API o base de datos; autenticación real; persistencia de favoritos; reservas, pagos, mapas, i18n y tests automatizados; paginación o scroll infinito. El botón de reserva del detalle está deshabilitado a propósito, con una nota que lo explica.
+Backend, API or database; real authentication; persistent favorites; bookings, payments, maps, i18n and automated tests; pagination or infinite scroll. The booking button on the detail page is disabled on purpose, with a note explaining why.
+
+## Author
+
+**Diego Reynoso Flores** · [GitHub](https://github.com/DiegoReynoso04)
